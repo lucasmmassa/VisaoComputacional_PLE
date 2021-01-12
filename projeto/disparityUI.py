@@ -10,8 +10,9 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
-from disparity_map import *
-
+from create_model import *
+import os
+import open3d as o3d
 
 class DisparityUI(object):
     def setupUi(self, MainWindow):
@@ -20,8 +21,11 @@ class DisparityUI(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.calculateButton = QtWidgets.QPushButton(self.centralwidget)
-        self.calculateButton.setGeometry(QtCore.QRect(110, 510, 151, 41))
+        self.calculateButton.setGeometry(QtCore.QRect(110, 510, 151, 30))
         self.calculateButton.setObjectName("calculateButton")
+        self.reconstructButton = QtWidgets.QPushButton(self.centralwidget)
+        self.reconstructButton.setGeometry(QtCore.QRect(250, 545, 100, 30))
+        self.reconstructButton.setObjectName("reconstructButton")
         self.imageContainer = QtWidgets.QLabel(self.centralwidget)
         self.imageContainer.setGeometry(QtCore.QRect(380, 0, 411, 551))
         self.imageContainer.setText("")
@@ -36,6 +40,13 @@ class DisparityUI(object):
         self.winSize.setGeometry(QtCore.QRect(180, 170, 111, 31))
         self.winSize.setClearButtonEnabled(False)
         self.winSize.setObjectName("winSize")
+        self.factor = QtWidgets.QLineEdit(self.centralwidget)
+        self.factor.setGeometry(QtCore.QRect(160, 545, 80, 31))
+        self.factor.setClearButtonEnabled(False)
+        self.factor.setObjectName("factor")
+        self.label_1 = QtWidgets.QLabel(self.centralwidget)
+        self.label_1.setGeometry(QtCore.QRect(30, 545, 120, 31))
+        self.label_1.setObjectName("label_1")
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
         self.label_2.setGeometry(QtCore.QRect(60, 170, 61, 31))
         self.label_2.setObjectName("label_2")
@@ -120,14 +131,18 @@ class DisparityUI(object):
         self.browseLeft.clicked.connect(self.getLeftFile)
         self.browseRight.clicked.connect(self.getRightFile)
         self.calculateButton.clicked.connect(self.calculate)
+        self.reconstructButton.clicked.connect(self.reconstruct3d)
 
         ###################################################
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Reconstrução 3D"))
-        self.calculateButton.setText(_translate("MainWindow", "Calcular mapa de disparidade"))
-        self.winSize.setPlaceholderText(_translate("MainWindow", "Win Size"))
+        self.calculateButton.setText(_translate("MainWindow", "Gerar modelo 3D"))
+        self.reconstructButton.setText(_translate("MainWindow", "Reconstruir"))
+        self.winSize.setText('2')
+        self.factor.setText('25')
+        self.label_1.setText(_translate("MainWindow", "Focal Length Factor (%):"))
         self.label_2.setText(_translate("MainWindow", "Win Size:"))
         self.label_3.setText(_translate("MainWindow", "Min Disp:"))
         self.label_4.setText(_translate("MainWindow", "Block Size:"))
@@ -135,12 +150,12 @@ class DisparityUI(object):
         self.label_6.setText(_translate("MainWindow", "Uniqueness:"))
         self.label_7.setText(_translate("MainWindow", "Speckle Size:"))
         self.label_8.setText(_translate("MainWindow", "Speckle Range:"))
-        self.maxDisp.setPlaceholderText(_translate("MainWindow", "Max Disp"))
-        self.minDisp.setPlaceholderText(_translate("MainWindow", "Min Disp"))
-        self.blockSize.setPlaceholderText(_translate("MainWindow", "Block Size"))
-        self.uniqueness.setPlaceholderText(_translate("MainWindow", "Uniqueness Ratio"))
-        self.speckleSize.setPlaceholderText(_translate("MainWindow", "Speckle Window Size"))
-        self.speckleRange.setPlaceholderText(_translate("MainWindow", "Speckle Range"))
+        self.maxDisp.setText('128')
+        self.minDisp.setText('0')
+        self.blockSize.setText('3')
+        self.uniqueness.setText('5')
+        self.speckleSize.setText('5')
+        self.speckleRange.setText('1')
         self.label_9.setText(_translate("MainWindow", "Right Image:"))
         self.label_10.setText(_translate("MainWindow", "Left Image:"))
         self.leftImage.setPlaceholderText(_translate("MainWindow", "Left Image"))
@@ -166,10 +181,55 @@ class DisparityUI(object):
             self.rightImage.setText(fname[0])
 
     def calculate(self):
-       li = self.leftImage.text()
-       ri = self.rightImage.text()
-       generateDisparityMap(li,ri)
-       self.imageContainer.setPixmap(QtGui.QPixmap('disparity_map.jpg'))
+        li = self.leftImage.text()
+        ri = self.rightImage.text()
+
+        values = [self.winSize.text(),self.minDisp.text(),self.maxDisp.text(),self.blockSize.text()
+                    ,self.uniqueness.text(), self.speckleSize.text(), self.speckleRange.text()]
+
+        valid = True
+
+        if (not os.path.isfile(li)) or (not os.path.isfile(ri)):
+            valid = False
+
+        if li == ri:
+            valid == False
+
+        for i in range(len(values)):
+            aux = values[i]
+            if aux[0] == '-' and len(aux) > 1:
+                aux = aux[1:]
+
+            if aux.isdigit():
+                values[i] = int(values[i])
+            else:
+                valid = False
+                break
+
+        factor = self.factor.text()
+
+        if not factor.isdigit():
+            valid = False
+
+        if valid:
+            ws,mind,maxd,bs,u,ss,sr = (values)
+            generateDisparityMap(li,ri,ws,mind,maxd,bs,u,ss,sr,int(factor))
+            self.imageContainer.setPixmap(QtGui.QPixmap('disparity_map.jpg'))
+
+        else:
+            pass
+
+    def reconstruct3d(self):
+        valid = True
+
+        if (not os.path.isfile('reconstructed.ply')):
+            valid = False
+
+        if valid:
+            cloud = o3d.io.read_point_cloud('reconstructed.ply')
+            o3d.visualization.draw_geometries([cloud])
+        else:
+            pass
 
     ########################################################################
 
