@@ -67,8 +67,8 @@ print ("\nComputing the disparity  map...")
 disparity_map = stereo.compute(img_1_undistorted, img_2_undistorted)
 
 #Show disparity map before generating 3D cloud to verify that point cloud will be usable. 
-# plt.imshow(disparity_map,'gray')
-# plt.show()
+plt.imshow(disparity_map,'gray')
+plt.show()
 
 #Generate  point cloud. 
 print ("\nGenerating the 3D map...")
@@ -83,7 +83,7 @@ Q = np.float32([[1,0,0,-w/2.0],
 #Link : https://ags.cs.uni-kl.de/fileadmin/inf_ags/3dcv-ws14-15/3DCV_lec01_camera.pdf
 Q2 = np.float32([[1,0,0,0],
     [0,-1,0,0],
-    [0,0,focal_length*0.05,0], #Focal length multiplication obtained experimentally. 
+    [0,0,focal_length*0.2,0], #Focal length multiplication obtained experimentally. 
     [0,0,0,1]])
 #Reproject points into 3D
 points_3D = cv2.reprojectImageTo3D(disparity_map, Q2)

@@ -1,0 +1,3 @@
+from disparityUI import *
+
+runDisparityUI()
